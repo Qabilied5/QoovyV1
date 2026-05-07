@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QTream - Music Player</title>
+<style>
+:root {
+  --bg: #080810;
+  --orb1: rgba(99,68,255,0.22);
+  --orb2: rgba(236,64,162,0.16);
+  --orb3: rgba(0,200,255,0.12);
+  --glass: rgba(255,255,255,0.04);
+  --glass-border: rgba(255,255,255,0.09);
+  --glass-hover: rgba(255,255,255,0.07);
+  --accent: #a78bfa;
+  --accent2: #ec64a2;
+  --accent3: #38bdf8;
+  --text: #f1f0ff;
+  --muted: #6b6a88;
+  --muted2: #4a4968;
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --red: #f87171;
+  --glow-a: rgba(167,139,250,0.35);
+  --glow-b: rgba(236,100,162,0.25);
+}
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; overflow:hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  display: flex; flex-direction: column; min-height: 100vh; position: relative;
+}
+
+/* BG */
+.bg-scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.orb { position: absolute; border-radius: 50%; filter: blur(80px); animation: drift 12s ease-in-out infinite; }
+.orb-1 { width:600px;height:600px;background:var(--orb1);top:-200px;left:-200px;animation-duration:14s; }
+.orb-2 { width:500px;height:500px;background:var(--orb2);bottom:-150px;right:-100px;animation-duration:18s;animation-delay:-6s; }
+.orb-3 { width:400px;height:400px;background:var(--orb3);top:30%;left:40%;animation-duration:22s;animation-delay:-10s; }
+@keyframes drift {
+  0%,100%{transform:translate(0,0) scale(1);}
+  25%{transform:translate(40px,-30px) scale(1.05);}
+  50%{transform:translate(-20px,50px) scale(0.95);}
+  75%{transform:translate(60px,20px) scale(1.02);}
+}
+.grid-overlay {
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+
+/* HEADER */
+header {
+  position:relative;z-index:20;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 28px;
+  background:rgba(8,8,16,0.7);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--glass-border);
+}
+.logo-wrap { display:flex;align-items:baseline;gap:10px; }
+.logo-text {
+  font-size:22px;font-weight:800;letter-spacing:5px;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  text-transform:uppercase;
+}
+.logo-sub { font-size:10px;letter-spacing:2px;color:var(--muted);font-weight:500;text-transform:uppercase; }
+.header-right { display:flex;align-items:center;gap:8px; }
+
+.api-btn {
+  display:flex;align-items:center;gap:7px;
+  background:var(--glass);border:1px solid var(--glass-border);
+  color:var(--text);padding:7px 14px;border-radius:10px;
+  font-size:12px;font-family:'Courier New',monospace;
+  cursor:pointer;letter-spacing:1px;transition:all 0.2s;backdrop-filter:blur(10px);
+}
+.api-btn:hover { background:var(--glass-hover);border-color:var(--accent);box-shadow:0 0 14px var(--glow-a); }
+
+/* Mode indicator badge */
+.mode-badge {
+  display:flex;align-items:center;gap:6px;
+  background:var(--glass);border:1px solid var(--glass-border);
+  color:var(--muted);padding:6px 12px;border-radius:10px;
+  font-size:11px;font-family:'Courier New',monospace;
+  letter-spacing:0.5px;
+}
+.mode-badge .dot { width:6px;height:6px;border-radius:50%;background:var(--muted2);transition:all 0.4s; }
+.mode-badge .dot.yt { background:var(--red);box-shadow:0 0 8px var(--red); }
+.mode-badge .dot.inv { background:var(--green);box-shadow:0 0 8px var(--green); }
+.mode-badge .dot.proxy { background:var(--yellow);box-shadow:0 0 8px var(--yellow); }
+
+.adblock-badge {
+  display:flex;align-items:center;gap:5px;
+  background:rgba(74,222,128,0.08);
+  border:1px solid rgba(74,222,128,0.2);
+  color:var(--green);padding:6px 12px;border-radius:10px;
+  font-size:11px;letter-spacing:0.5px;
+}
+
+.status-dot { width:7px;height:7px;border-radius:50%;background:var(--muted2);transition:all 0.4s;flex-shrink:0; }
+.status-dot.active { background:var(--green);box-shadow:0 0 8px var(--green); }
+
+/* LAYOUT */
+.app { position:relative;z-index:5;flex:1;display:flex;overflow:hidden; }
+
+/* SIDEBAR */
+.sidebar {
+  width:310px;min-width:310px;
+  display:flex;flex-direction:column;overflow:hidden;
+  background:rgba(8,8,16,0.5);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-right:1px solid var(--glass-border);
+}
+.search-section { padding:18px 16px 14px;border-bottom:1px solid var(--glass-border); }
+.section-label {
+  font-size:9px;letter-spacing:3px;color:var(--muted);
+  text-transform:uppercase;font-weight:600;margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
+}
+.section-label::before { content:'';width:14px;height:1px;background:var(--accent);display:inline-block; }
+.search-wrap { display:flex;gap:8px; }
+.search-input {
+  flex:1;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);
+  border-radius:10px;color:var(--text);font-size:13px;padding:9px 13px;
+  outline:none;font-family:inherit;transition:all 0.25s;backdrop-filter:blur(8px);
+}
+.search-input::placeholder { color:var(--muted); }
+.search-input:focus {
+  border-color:var(--accent);background:rgba(167,139,250,0.07);
+  box-shadow:0 0 0 3px rgba(167,139,250,0.12),0 0 20px rgba(167,139,250,0.1);
+}
+.btn-go {
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;border-radius:10px;color:white;font-size:12px;font-weight:700;
+  letter-spacing:1px;padding:9px 14px;cursor:pointer;font-family:inherit;
+  text-transform:uppercase;transition:all 0.2s;white-space:nowrap;
+}
+.btn-go:hover { transform:scale(1.04);box-shadow:0 0 20px var(--glow-a); }
+.btn-go:active { transform:scale(0.97); }
+.btn-go:disabled { opacity:0.5;cursor:not-allowed;transform:none; }
+
+/* SOURCE STATUS STRIP */
+.source-strip {
+  padding:8px 16px;
+  background:rgba(0,0,0,0.2);
+  border-bottom:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.source-info { font-size:10px;color:var(--muted);font-family:'Courier New',monospace; }
+.source-label { font-size:10px;font-weight:600; }
+.source-label.yt { color:var(--red); }
+.source-label.inv { color:var(--green); }
+.source-label.proxy { color:var(--yellow); }
+.source-label.demo { color:var(--muted); }
+
+/* PLAYLIST */
+.playlist-head { padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between; }
+.badge {
+  font-size:10px;font-family:'Courier New',monospace;
+  background:rgba(167,139,250,0.15);border:1px solid rgba(167,139,250,0.25);
+  color:var(--accent);padding:2px 8px;border-radius:20px;
+}
+.track-list { flex:1;overflow-y:auto;padding:4px 8px 12px; }
+.track-list::-webkit-scrollbar { width:3px; }
+.track-list::-webkit-scrollbar-track { background:transparent; }
+.track-list::-webkit-scrollbar-thumb { background:var(--muted2);border-radius:3px; }
+.track-item {
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:12px;cursor:pointer;
+  transition:all 0.2s;border:1px solid transparent;margin-bottom:3px;position:relative;
+}
+.track-item:hover { background:var(--glass-hover);border-color:var(--glass-border); }
+.track-item.active {
+  background:rgba(167,139,250,0.1);border-color:rgba(167,139,250,0.25);
+  box-shadow:inset 0 0 20px rgba(167,139,250,0.05),0 0 12px rgba(167,139,250,0.08);
+}
+.track-thumb { width:42px;height:42px;border-radius:9px;object-fit:cover;flex-shrink:0;background:var(--muted2); }
+.track-info { flex:1;min-width:0; }
+.track-title { font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);margin-bottom:2px; }
+.track-ch { font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.track-idx { font-size:11px;color:var(--muted);font-family:'Courier New',monospace;min-width:20px;text-align:right; }
+.track-item.active .track-idx { display:none; }
+.wave-bars { display:none;align-items:flex-end;gap:2px;height:16px; }
+.track-item.active .wave-bars { display:flex; }
+.wave-bar { width:3px;border-radius:2px;background:var(--accent);animation:wave-anim 0.8s ease-in-out infinite; }
+.wave-bar:nth-child(1){animation-delay:0s;}
+.wave-bar:nth-child(2){animation-delay:0.15s;}
+.wave-bar:nth-child(3){animation-delay:0.3s;}
+@keyframes wave-anim {
+  0%,100%{height:4px;opacity:0.5;}
+  50%{height:14px;opacity:1;}
+}
+
+/* EMPTY */
+.empty-wrap { text-align:center;padding:44px 20px; }
+.empty-icon-wrap {
+  width:64px;height:64px;margin:0 auto 16px;border-radius:16px;
+  background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.15);
+  display:flex;align-items:center;justify-content:center;
+}
+.empty-icon-wrap svg { opacity:0.4; }
+.empty-title { font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px; }
+.empty-sub { font-size:11px;color:var(--muted2);line-height:1.7; }
+.spinner-sm {
+  width:28px;height:28px;border:2px solid var(--muted2);border-top-color:var(--accent);
+  border-radius:50%;animation:spin 0.7s linear infinite;margin:16px auto 0;
+}
+
+/* MAIN */
+.main-panel { flex:1;display:flex;flex-direction:column;overflow:hidden; }
+.video-area {
+  flex:1;display:flex;align-items:center;justify-content:center;
+  padding:28px 24px 16px;overflow:hidden;position:relative;
+}
+
+/* IDLE */
+.idle-view { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center; }
+.idle-disc { width:110px;height:110px;border-radius:50%;position:relative;animation:disc-spin 10s linear infinite paused; }
+.idle-disc.spin { animation-play-state:running; }
+.disc-outer { position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,#6344ff,#ec64a2,#38bdf8,#6344ff);opacity:0.3; }
+.disc-inner { position:absolute;inset:12px;border-radius:50%;background:var(--bg);border:1px solid var(--glass-border);display:flex;align-items:center;justify-content:center; }
+.disc-hole { width:18px;height:18px;border-radius:50%;background:var(--accent);opacity:0.6; }
+@keyframes disc-spin { to { transform:rotate(360deg); } }
+.idle-heading { font-size:28px;font-weight:800;letter-spacing:3px;text-transform:uppercase;color:var(--muted); }
+.idle-desc { font-size:13px;color:var(--muted2);max-width:280px;line-height:1.7; }
+
+/* PLAYER */
+.player-view { display:none;width:100%;max-width:700px; }
+.video-glass-wrap {
+  position:relative;border-radius:18px;overflow:hidden;
+  border:1px solid var(--glass-border);
+  box-shadow:0 0 0 1px rgba(167,139,250,0.08),0 8px 64px rgba(0,0,0,0.8),0 0 60px rgba(99,68,255,0.12);
+  aspect-ratio:16/9;background:#000;
+}
+#yt-frame-target { width:100%;height:100%;border:none;display:block; }
+.video-shimmer { position:absolute;inset:0;pointer-events:none;border-radius:18px;box-shadow:inset 0 0 60px rgba(0,0,0,0.4); }
+.vid-loading {
+  display:none;position:absolute;inset:0;
+  background:rgba(8,8,16,0.7);align-items:center;justify-content:center;
+  border-radius:18px;z-index:10;backdrop-filter:blur(4px);
+  flex-direction:column;gap:12px;
+}
+.vid-loading.show { display:flex; }
+.spinner { width:44px;height:44px;border:3px solid rgba(167,139,250,0.2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite; }
+.loading-text { font-size:11px;color:var(--muted);letter-spacing:1px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* AD BLOCKER OVERLAY */
+.ad-blocker-overlay {
+  display:none;position:absolute;inset:0;
+  background:rgba(8,8,16,0.97);
+  align-items:center;justify-content:center;
+  border-radius:18px;z-index:20;
+  flex-direction:column;gap:14px;
+  border:1px solid rgba(74,222,128,0.2);
+}
+.ad-blocker-overlay.show { display:flex; }
+.ad-shield {
+  width:60px;height:60px;border-radius:16px;
+  background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.25);
+  display:flex;align-items:center;justify-content:center;
+}
+.ad-block-title { font-size:14px;font-weight:700;color:var(--green);letter-spacing:1px; }
+.ad-block-sub { font-size:11px;color:var(--muted);text-align:center;max-width:200px;line-height:1.7; }
+.ad-skip-timer {
+  font-size:12px;font-family:'Courier New',monospace;
+  color:var(--yellow);letter-spacing:1px;
+}
+.btn-skip-ad {
+  background:linear-gradient(135deg,var(--green),#22d3ee);
+  border:none;border-radius:10px;color:#000;
+  font-size:12px;font-weight:800;padding:8px 20px;
+  cursor:pointer;letter-spacing:1px;text-transform:uppercase;
+  transition:all 0.2s;
+}
+.btn-skip-ad:hover { transform:scale(1.05); }
+
+/* NOW PLAYING */
+.now-playing-info { margin-top:18px;text-align:center;padding:0 8px; }
+.np-label { font-size:9px;letter-spacing:4px;color:var(--accent);text-transform:uppercase;font-weight:600;margin-bottom:6px;opacity:0.8; }
+.np-title {
+  font-size:22px;font-weight:800;letter-spacing:1px;
+  background:linear-gradient(135deg,var(--text) 0%,rgba(241,240,255,0.7) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:640px;margin:0 auto 4px;
+}
+.np-ch { font-size:13px;color:var(--muted);font-weight:300; }
+.np-source { font-size:10px;color:var(--muted2);margin-top:4px;font-family:'Courier New',monospace; }
+
+/* CONTROLS */
+.controls-zone {
+  padding:14px 28px 22px;
+  background:rgba(8,8,16,0.6);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border-top:1px solid var(--glass-border);
+}
+.progress-row { display:flex;align-items:center;gap:12px;margin-bottom:14px; }
+.time { font-size:11px;font-family:'Courier New',monospace;color:var(--muted);min-width:36px;text-align:center; }
+.prog-track { flex:1;height:4px;background:rgba(255,255,255,0.08);border-radius:4px;cursor:pointer;position:relative;overflow:visible; }
+.prog-fill {
+  height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));
+  border-radius:4px;width:0%;transition:width 0.8s linear;position:relative;
+}
+.prog-fill::after {
+  content:'';position:absolute;right:-5px;top:50%;transform:translateY(-50%);
+  width:10px;height:10px;border-radius:50%;background:white;
+  opacity:0;transition:opacity 0.2s;box-shadow:0 0 8px rgba(255,255,255,0.5);
+}
+.prog-track:hover .prog-fill::after { opacity:1; }
+.ctrl-row { display:flex;align-items:center;justify-content:space-between; }
+.ctrl-group { display:flex;align-items:center;gap:8px; }
+.c-btn {
+  background:none;border:none;color:var(--muted);cursor:pointer;
+  width:38px;height:38px;display:flex;align-items:center;justify-content:center;
+  border-radius:10px;transition:all 0.2s;
+}
+.c-btn:hover { color:var(--text);background:var(--glass); }
+.c-btn.lit { color:var(--accent); }
+.play-btn {
+  width:54px;height:54px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;color:white;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.25s;
+  box-shadow:0 0 24px var(--glow-a),0 4px 16px rgba(0,0,0,0.4);
+}
+.play-btn:hover { transform:scale(1.08);box-shadow:0 0 36px var(--glow-a),0 4px 24px rgba(0,0,0,0.5); }
+.play-btn:active { transform:scale(0.95); }
+.vol-group { display:flex;align-items:center;gap:8px; }
+input[type=range].vol-slider { -webkit-appearance:none;width:80px;height:4px;border-radius:4px;background:rgba(255,255,255,0.1);outline:none;cursor:pointer; }
+input[type=range].vol-slider::-webkit-slider-thumb { -webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--text);cursor:pointer;transition:all 0.2s; }
+input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--accent);box-shadow:0 0 8px var(--glow-a); }
+
+/* MODAL */
+.modal-backdrop {
+  display:none;position:fixed;inset:0;z-index:100;
+  background:rgba(8,8,16,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  align-items:center;justify-content:center;
+}
+.modal-backdrop.show { display:flex; }
+.modal {
+  background:rgba(18,18,28,0.97);border:1px solid var(--glass-border);
+  border-radius:20px;padding:36px 32px;width:100%;max-width:480px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  box-shadow:0 0 80px rgba(167,139,250,0.12),0 24px 64px rgba(0,0,0,0.6);
+  animation:modal-in 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  max-height:90vh;overflow-y:auto;
+}
+@keyframes modal-in {
+  from{opacity:0;transform:scale(0.9) translateY(20px);}
+  to{opacity:1;transform:scale(1) translateY(0);}
+}
+.modal-icon { width:52px;height:52px;border-radius:14px;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:20px; }
+.modal-title { font-size:20px;font-weight:800;letter-spacing:1px;margin-bottom:6px; }
+.modal-desc { font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:22px; }
+.modal-desc a { color:var(--accent3);text-decoration:none; }
+.modal-desc a:hover { text-decoration:underline; }
+
+/* Source selector tabs */
+.source-tabs { display:flex;gap:6px;margin-bottom:16px; }
+.source-tab {
+  flex:1;padding:8px 6px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--glass-border);background:var(--glass);
+  font-size:11px;font-family:'Courier New',monospace;
+  color:var(--muted);text-align:center;transition:all 0.2s;
+}
+.source-tab:hover { border-color:var(--accent);color:var(--text); }
+.source-tab.sel-yt { border-color:var(--red);color:var(--red);background:rgba(248,113,113,0.08); }
+.source-tab.sel-inv { border-color:var(--green);color:var(--green);background:rgba(74,222,128,0.08); }
+.source-tab.sel-auto { border-color:var(--yellow);color:var(--yellow);background:rgba(251,191,36,0.08); }
+.tab-name { font-weight:700;display:block;margin-bottom:2px; }
+.tab-desc { font-size:9px;opacity:0.7;letter-spacing:0.3px; }
+
+.source-panel { margin-bottom:16px; }
+.source-panel-title { font-size:9px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:8px; }
+
+.modal-input-wrap { position:relative;margin-bottom:14px; }
+.modal-input {
+  width:100%;background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);
+  border-radius:12px;color:var(--text);font-size:13px;font-family:'Courier New',monospace;
+  padding:12px 46px 12px 16px;outline:none;transition:all 0.25s;
+}
+.modal-input:focus { border-color:var(--accent);background:rgba(167,139,250,0.06);box-shadow:0 0 0 3px rgba(167,139,250,0.1); }
+.modal-input::placeholder { color:var(--muted); }
+.toggle-key { position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;transition:color 0.2s; }
+.toggle-key:hover { color:var(--text); }
+
+/* Invidious instance selector */
+.inv-selector {
+  background:rgba(255,255,255,0.05);border:1px solid var(--glass-border);
+  border-radius:12px;color:var(--text);font-size:13px;font-family:'Courier New',monospace;
+  padding:10px 16px;outline:none;width:100%;cursor:pointer;margin-bottom:14px;
+  transition:all 0.25s;
+}
+.inv-selector:focus { border-color:var(--green);box-shadow:0 0 0 3px rgba(74,222,128,0.1); }
+option { background:#12121c; }
+
+/* Adblock toggle */
+.toggle-row {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;border-radius:12px;
+  background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.15);
+  margin-bottom:14px;
+}
+.toggle-label { font-size:12px;color:var(--text); }
+.toggle-label span { display:block;font-size:10px;color:var(--muted);margin-top:2px; }
+.toggle-switch {
+  position:relative;width:40px;height:22px;
+  background:var(--muted2);border-radius:11px;cursor:pointer;
+  transition:background 0.3s;border:none;flex-shrink:0;
+}
+.toggle-switch.on { background:var(--green); }
+.toggle-switch::after {
+  content:'';position:absolute;top:3px;left:3px;
+  width:16px;height:16px;background:white;border-radius:50%;
+  transition:transform 0.3s;
+}
+.toggle-switch.on::after { transform:translateX(18px); }
+
+.modal-actions { display:flex;gap:10px; }
+.btn-confirm {
+  flex:1;background:linear-gradient(135deg,var(--accent),var(--accent2));
+  border:none;border-radius:12px;color:white;font-size:14px;font-weight:700;
+  padding:12px;cursor:pointer;font-family:inherit;text-transform:uppercase;letter-spacing:1px;transition:all 0.2s;
+}
+.btn-confirm:hover { transform:translateY(-1px);box-shadow:0 6px 24px var(--glow-a); }
+.btn-cancel { background:var(--glass);border:1px solid var(--glass-border);border-radius:12px;color:var(--muted);font-size:14px;font-weight:600;padding:12px 20px;cursor:pointer;font-family:inherit;transition:all 0.2s; }
+.btn-cancel:hover { color:var(--text);background:var(--glass-hover); }
+.modal-note { margin-top:14px;font-size:11px;color:var(--muted2);line-height:1.6;text-align:center; }
+
+/* TOAST */
+.toast {
+  position:fixed;bottom:90px;right:20px;z-index:999;
+  background:rgba(22,22,34,0.97);border:1px solid var(--glass-border);
+  border-left:3px solid var(--accent);color:var(--text);padding:10px 16px;
+  border-radius:12px;font-size:12.5px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+  transform:translateY(16px) scale(0.97);opacity:0;
+  transition:all 0.3s cubic-bezier(0.34,1.56,0.64,1);pointer-events:none;
+  max-width:300px;box-shadow:0 4px 24px rgba(0,0,0,0.4);
+}
+.toast.show { transform:translateY(0) scale(1);opacity:1; }
+
+/* Divider */
+.modal-divider { height:1px;background:var(--glass-border);margin:16px 0; }
+</style>
+</head>
+<body>
+
+<div class="bg-scene">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <div class="grid-overlay"></div>
+</div>
+
+<header>
+  <div class="logo-wrap">
+    <span class="logo-text">QTream</span>
+    <span class="logo-sub">Music Player</span>
+  </div>
+  <div class="header-right">
+    <div class="adblock-badge" id="adblock-badge" style="display:none">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      AdBlock ON
+    </div>
+    <div class="mode-badge" id="mode-badge">
+      <span class="dot" id="mode-dot"></span>
+      <span id="mode-label">OFFLINE</span>
+    </div>
+    <button class="api-btn" onclick="openModal(false)" id="api-btn-header">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="api-btn-label">PENGATURAN</span>
+    </button>
+  </div>
+</header>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="search-section">
+      <div class="section-label">Cari Musik</div>
+      <div class="search-wrap">
+        <input class="search-input" id="search-input" type="text" placeholder="Nama lagu atau artis..."
+          onkeydown="if(event.key==='Enter') doSearch()"/>
+        <button class="btn-go" id="btn-search" onclick="doSearch()">Cari</button>
+      </div>
+    </div>
+
+    <div class="source-strip">
+      <span class="source-info">Sumber:</span>
+      <span class="source-label demo" id="active-source-label">BELUM AKTIF</span>
+    </div>
+
+    <div class="playlist-head">
+      <div class="section-label" style="margin:0">Playlist</div>
+      <span class="badge" id="track-badge">0 lagu</span>
+    </div>
+
+    <div class="track-list" id="track-list">
+      <div class="empty-wrap">
+        <div class="empty-icon-wrap">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+          </svg>
+        </div>
+        <div class="empty-title">Belum ada lagu</div>
+        <div class="empty-sub">Buka Pengaturan, pilih sumber, lalu cari musik</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main-panel">
+    <div class="video-area">
+      <div class="idle-view" id="idle-view">
+        <div class="idle-disc" id="idle-disc">
+          <div class="disc-outer"></div>
+          <div class="disc-inner"><div class="disc-hole"></div></div>
+        </div>
+        <div class="idle-heading">Siap Streaming</div>
+        <div class="idle-desc">Buka Pengaturan, pilih sumber pencarian dan player, aktifkan AdBlock, lalu cari lagu.</div>
+      </div>
+
+      <div class="player-view" id="player-view">
+        <div class="video-glass-wrap">
+          <div id="yt-frame-target"></div>
+          <div class="video-shimmer"></div>
+          <div class="vid-loading" id="vid-loading">
+            <div class="spinner"></div>
+            <div class="loading-text" id="loading-text">MEMUAT...</div>
+          </div>
+          <!-- AD BLOCKER OVERLAY -->
+          <div class="ad-blocker-overlay" id="ad-overlay">
+            <div class="ad-shield">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div class="ad-block-title">IKLAN DIBLOKIR</div>
+            <div class="ad-block-sub">Menunggu iklan selesai lalu lanjut otomatis...</div>
+            <div class="ad-skip-timer" id="ad-timer">Melewati dalam 5 detik...</div>
+            <button class="btn-skip-ad" onclick="forceSkipAd()">LEWATI SEKARANG</button>
+          </div>
+        </div>
+        <div class="now-playing-info">
+          <div class="np-label">Now Playing</div>
+          <div class="np-title" id="np-title">--</div>
+          <div class="np-ch" id="np-ch">--</div>
+          <div class="np-source" id="np-source"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls-zone">
+      <div class="progress-row">
+        <span class="time" id="t-cur">0:00</span>
+        <div class="prog-track" id="prog-track" onclick="seekTo(event)">
+          <div class="prog-fill" id="prog-fill"></div>
+        </div>
+        <span class="time" id="t-dur">0:00</span>
+      </div>
+      <div class="ctrl-row">
+        <div class="ctrl-group">
+          <button class="c-btn" id="btn-shuf" onclick="toggleShuffle()" title="Acak">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+              <polyline points="21 16 21 21 16 21"/><line x1="4" y1="4" x2="9" y2="9"/>
+            </svg>
+          </button>
+          <button class="c-btn" id="btn-rep" onclick="toggleRepeat()" title="Ulangi">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="ctrl-group">
+          <button class="c-btn" onclick="prevTrack()" style="width:44px;height:44px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="19 20 9 12 19 4 19 20"/><rect x="5" y="4" width="3" height="16" rx="1"/>
+            </svg>
+          </button>
+          <button class="play-btn" id="btn-play" onclick="togglePlay()">
+            <svg id="ico-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <svg id="ico-pause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+              <rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>
+            </svg>
+          </button>
+          <button class="c-btn" onclick="nextTrack()" style="width:44px;height:44px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 4 15 12 5 20 5 4"/><rect x="16" y="4" width="3" height="16" rx="1"/>
+            </svg>
+          </button>
+        </div>
+        <div class="ctrl-group">
+          <div class="vol-group">
+            <button class="c-btn" id="btn-mute" onclick="toggleMute()">
+              <svg id="ico-vol" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+              </svg>
+              <svg id="ico-mute" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+              </svg>
+            </button>
+            <input type="range" class="vol-slider" id="vol-slider" min="0" max="100" value="80" oninput="setVolume(this.value)"/>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-backdrop" id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-icon">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </div>
+    <div class="modal-title">Pengaturan QTream</div>
+    <div class="modal-desc">Pilih sumber pencarian dan player. Gunakan Invidious agar lolos pemblokiran jaringan kantor.</div>
+
+    <!-- SOURCE MODE -->
+    <div class="source-panel-title">MODE SUMBER</div>
+    <div class="source-tabs">
+      <div class="source-tab" id="tab-auto" onclick="selectMode('auto')">
+        <span class="tab-name">AUTO</span>
+        <span class="tab-desc">Coba semua sumber</span>
+      </div>
+      <div class="source-tab" id="tab-inv" onclick="selectMode('inv')">
+        <span class="tab-name">INVIDIOUS</span>
+        <span class="tab-desc">Anti-blokir + bebas iklan</span>
+      </div>
+      <div class="source-tab" id="tab-yt" onclick="selectMode('yt')">
+        <span class="tab-name">YOUTUBE API</span>
+        <span class="tab-desc">Butuh API Key</span>
+      </div>
+    </div>
+
+    <!-- INVIDIOUS INSTANCE -->
+    <div id="inv-panel">
+      <div class="source-panel-title">INSTANCE INVIDIOUS</div>
+      <select class="inv-selector" id="inv-instance">
+        <option value="https://invidious.privacyredirect.com">invidious.privacyredirect.com (Rekomendasi)</option>
+        <option value="https://inv.nadeko.net">inv.nadeko.net</option>
+        <option value="https://invidious.nerdvpn.de">invidious.nerdvpn.de</option>
+        <option value="https://invidious.perennialte.ch">invidious.perennialte.ch</option>
+        <option value="https://yt.cdaut.de">yt.cdaut.de</option>
+        <option value="https://invidious.drgns.space">invidious.drgns.space</option>
+        <option value="custom">-- Instance Custom --</option>
+      </select>
+      <div class="modal-input-wrap" id="custom-inv-wrap" style="display:none">
+        <input class="modal-input" id="custom-inv-input" type="text" placeholder="https://your-invidious-instance.com"/>
+      </div>
+    </div>
+
+    <!-- YOUTUBE API KEY PANEL -->
+    <div id="yt-panel" style="display:none">
+      <div class="source-panel-title">YOUTUBE DATA API v3 KEY</div>
+      <div class="modal-input-wrap">
+        <input class="modal-input" id="api-key-input" type="password" placeholder="AIzaSy..." autocomplete="off" spellcheck="false"/>
+        <button class="toggle-key" onclick="toggleKeyVis()">
+          <svg id="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          <svg id="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+            <line x1="1" y1="1" x2="23" y2="23"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-divider"></div>
+
+    <!-- AD BLOCK TOGGLE -->
+    <div class="toggle-row">
+      <div class="toggle-label">
+        AdBlock - Blokir Iklan YouTube
+        <span>Sembunyikan iklan saat pemutaran (Invidious player = bebas iklan 100%)</span>
+      </div>
+      <button class="toggle-switch on" id="adblock-toggle" onclick="toggleAdblock()"></button>
+    </div>
+
+    <!-- PLAYER TYPE -->
+    <div class="source-panel-title">TIPE PLAYER</div>
+    <div class="source-tabs" style="margin-bottom:16px">
+      <div class="source-tab" id="tab-player-inv" onclick="selectPlayer('inv')">
+        <span class="tab-name">INVIDIOUS</span>
+        <span class="tab-desc">Bebas iklan 100%</span>
+      </div>
+      <div class="source-tab" id="tab-player-yt" onclick="selectPlayer('yt')">
+        <span class="tab-name">YOUTUBE</span>
+        <span class="tab-desc">Standard + adblock</span>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-confirm" onclick="saveSettings()">Simpan & Terapkan</button>
+      <button class="btn-cancel" id="btn-modal-cancel" onclick="closeModal()">Batal</button>
+    </div>
+    <div class="modal-note">
+      Invidious = mirror YouTube open-source, bebas blokir kantor, bebas iklan, tanpa API Key.<br>
+      Mode AUTO akan mencoba Invidious dulu, fallback ke YouTube jika gagal.
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── CONFIG & STATE ───────────────────────────────────────
+var CFG = {
+  mode: 'auto',          // 'auto' | 'inv' | 'yt'
+  playerType: 'inv',     // 'inv' | 'yt'
+  apiKey: '',
+  invInstance: 'https://invidious.privacyredirect.com',
+  adblock: true
+};
+
+// Multiple Invidious instances for auto-fallback
+var INV_INSTANCES = [
+  'https://invidious.privacyredirect.com',
+  'https://inv.nadeko.net',
+  'https://invidious.nerdvpn.de',
+  'https://invidious.perennialte.ch',
+  'https://yt.cdaut.de',
+  'https://invidious.drgns.space'
+];
+
+// CORS proxies for YouTube API fallback
+var CORS_PROXIES = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+  'https://cors.eu.org/'
+];
+
+var ytPlayer = null;
+var playerReady = false;
+var tracks = [];
+var curIdx = -1;
+var isPlaying = false;
+var isShuffle = false;
+var isRepeat = false;
+var isMuted = false;
+var progTimer = null;
+var adTimer = null;
+var adSeconds = 0;
+var currentSource = 'none'; // track which source worked
+var firstOpen = true;
+
+// ─── YOUTUBE IFRAME API ───────────────────────────────────
+function loadYTScript() {
+  if (window.YT && window.YT.Player) { initYTPlayer(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  s.onerror = function() {
+    toast('YouTube API diblokir. Gunakan Invidious player.', 'warn');
+    playerReady = false;
+  };
+  document.head.appendChild(s);
+}
+
+function onYouTubeIframeAPIReady() { initYTPlayer(); }
+
+function initYTPlayer() {
+  if (CFG.playerType !== 'yt') return;
+  ytPlayer = new YT.Player('yt-frame-target', {
+    height: '100%', width: '100%',
+    playerVars: {
+      autoplay: 0, controls: 0, modestbranding: 1, rel: 0,
+      fs: 0, iv_load_policy: 3, playsinline: 1,
+      origin: window.location.origin
+    },
+    events: {
+      onReady: function() { playerReady = true; setVolumeRaw(80); },
+      onStateChange: function(e) {
+        var S = YT.PlayerState;
+        if (e.data === S.PLAYING) {
+          checkForAd();
+          setPlayState(true); hideLdr(); startProg();
+        } else if (e.data === S.PAUSED) {
+          setPlayState(false); stopProg();
+        } else if (e.data === S.ENDED) {
+          setPlayState(false); stopProg(); hideAdOverlay();
+          if (isRepeat) playTrack(curIdx); else nextTrack();
+        } else if (e.data === S.BUFFERING) {
+          showLdr();
+        }
+      },
+      onError: function(e) {
+        hideLdr(); hideAdOverlay();
+        toast('Video tidak dapat diputar, melewati...'); setTimeout(nextTrack, 1200);
+      }
+    }
+  });
+}
+
+// ─── AD DETECTION & BLOCKING ─────────────────────────────
+function checkForAd() {
+  if (!CFG.adblock || CFG.playerType !== 'yt') { hideLdr(); return; }
+  // Try to detect ad by checking if player iframe contains ad elements
+  // Since we can't access iframe DOM cross-origin, we use timing heuristics
+  // and the YouTube player API ad state
+  try {
+    var playerEl = document.querySelector('#yt-frame-target iframe') || document.getElementById('yt-frame-target');
+    // Check via postMessage-based ad detection
+    detectAdByDuration();
+  } catch(e) {
+    hideLdr();
+  }
+}
+
+function detectAdByDuration() {
+  if (!playerReady || !ytPlayer || typeof ytPlayer.getDuration !== 'function') return;
+  // When ad plays, getDuration returns ad duration (usually <30s for short ads)
+  // Also player title changes — we detect mismatch
+  setTimeout(function() {
+    try {
+      var dur = ytPlayer.getDuration();
+      var videoData = ytPlayer.getVideoData && ytPlayer.getVideoData();
+      if (videoData && tracks[curIdx]) {
+        // If video ID mismatches, it's an ad
+        if (videoData.video_id !== tracks[curIdx].id) {
+          showAdOverlay();
+          return;
+        }
+      }
+      hideLdr();
+      hideAdOverlay();
+    } catch(e) { hideLdr(); }
+  }, 1500);
+}
+
+function showAdOverlay() {
+  if (!CFG.adblock) return;
+  document.getElementById('ad-overlay').classList.add('show');
+  adSeconds = 5;
+  updateAdTimer();
+  if (adTimer) clearInterval(adTimer);
+  adTimer = setInterval(function() {
+    adSeconds--;
+    updateAdTimer();
+    if (adSeconds <= 0) {
+      forceSkipAd();
+    }
+  }, 1000);
+  // Also try to click skip button inside iframe via postMessage
+  trySkipAdButton();
+}
+
+function trySkipAdButton() {
+  // Send skip command to YT player
+  setTimeout(function() {
+    try {
+      if (ytPlayer && typeof ytPlayer.getPlayerState === 'function') {
+        // Try seeking past ad
+        ytPlayer.seekTo(ytPlayer.getDuration() - 0.1, true);
+      }
+    } catch(e) {}
+  }, 100);
+}
+
+function updateAdTimer() {
+  var el = document.getElementById('ad-timer');
+  if (el) el.textContent = 'Melewati iklan dalam ' + adSeconds + ' detik...';
+}
+
+function forceSkipAd() {
+  if (adTimer) clearInterval(adTimer);
+  hideAdOverlay();
+  try {
+    if (ytPlayer && playerReady) {
+      // Seek to real video start
+      ytPlayer.seekTo(0, true);
+      ytPlayer.playVideo();
+    }
+  } catch(e) {}
+  toast('Iklan dilewati!', 'ok');
+}
+
+function hideAdOverlay() {
+  if (adTimer) clearInterval(adTimer);
+  document.getElementById('ad-overlay').classList.remove('show');
+}
+
+// Continuously poll for ads during playback
+function startAdWatch() {
+  if (!CFG.adblock || CFG.playerType !== 'yt') return;
+  // Monitor every 3 seconds
+  setInterval(function() {
+    if (!isPlaying || !playerReady) return;
+    try {
+      var videoData = ytPlayer.getVideoData && ytPlayer.getVideoData();
+      if (videoData && tracks[curIdx] && videoData.video_id !== tracks[curIdx].id) {
+        if (!document.getElementById('ad-overlay').classList.contains('show')) {
+          showAdOverlay();
+        }
+      } else if (document.getElementById('ad-overlay').classList.contains('show')) {
+        hideAdOverlay();
+      }
+    } catch(e) {}
+  }, 2000);
+}
+
+// ─── INVIDIOUS PLAYER ─────────────────────────────────────
+function buildInvidiousEmbedUrl(videoId) {
+  var inst = CFG.invInstance;
+  // Invidious embed params: autoplay, no ads, dark theme
+  return inst + '/embed/' + videoId + '?autoplay=1&dark_mode=1&listen=0&quality=medium&local=1&player_style=youtube&continue_autoplay=0&nojs=0';
+}
+
+function loadInvidiousPlayer(videoId) {
+  var target = document.getElementById('yt-frame-target');
+  // Clear previous
+  target.innerHTML = '';
+  var iframe = document.createElement('iframe');
+  iframe.src = buildInvidiousEmbedUrl(videoId);
+  iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+  iframe.allow = 'autoplay; fullscreen';
+  iframe.allowFullscreen = true;
+  // iframe loaded = no more loading spinner
+  iframe.onload = function() {
+    hideLdr();
+    setPlayState(true);
+    playerReady = true;
+    // Simulate progress since we can't access Invidious iframe state
+    simulateProgress();
+  };
+  iframe.onerror = function() {
+    toast('Instance Invidious gagal, mencoba lain...', 'warn');
+    tryNextInvidiousInstance(videoId);
+  };
+  target.appendChild(iframe);
+  document.getElementById('loading-text').textContent = 'MEMUAT INVIDIOUS...';
+}
+
+var invInstanceIdx = 0;
+function tryNextInvidiousInstance(videoId) {
+  invInstanceIdx++;
+  if (invInstanceIdx >= INV_INSTANCES.length) {
+    invInstanceIdx = 0;
+    toast('Semua instance Invidious gagal. Coba YouTube player.', 'err');
+    // Fallback to YT player
+    CFG.playerType = 'yt';
+    loadYTPlayerVideo(videoId);
+    return;
+  }
+  CFG.invInstance = INV_INSTANCES[invInstanceIdx];
+  toast('Mencoba instance: ' + CFG.invInstance.replace('https://',''), 'warn');
+  loadInvidiousPlayer(videoId);
+}
+
+// Simulate progress for Invidious (can't access cross-origin iframe state)
+var simProgTimer = null;
+var simStart = 0;
+var simDur = 300; // default 5 min
+function simulateProgress() {
+  stopSimProg();
+  simStart = Date.now();
+  simDur = 300;
+  document.getElementById('t-dur').textContent = fmt(simDur);
+  simProgTimer = setInterval(function() {
+    var elapsed = (Date.now() - simStart) / 1000;
+    if (elapsed >= simDur) { stopSimProg(); return; }
+    document.getElementById('prog-fill').style.width = (elapsed / simDur * 100) + '%';
+    document.getElementById('t-cur').textContent = fmt(elapsed);
+  }, 1000);
+}
+function stopSimProg() {
+  if (simProgTimer) { clearInterval(simProgTimer); simProgTimer = null; }
+}
+
+// ─── SEARCH FUNCTIONS ─────────────────────────────────────
+function doSearch() {
+  var q = document.getElementById('search-input').value.trim();
+  if (!q) { toast('Masukkan nama lagu atau artis!'); return; }
+
+  var btn = document.getElementById('btn-search');
+  btn.disabled = true; btn.textContent = '...';
+  showSearchingState();
+
+  if (CFG.mode === 'yt') {
+    searchYouTube(q, btn);
+  } else if (CFG.mode === 'inv') {
+    searchInvidious(q, btn, CFG.invInstance, 0);
+  } else {
+    // AUTO: try Invidious first, fallback to YT
+    searchInvidious(q, btn, INV_INSTANCES[0], 0, function() {
+      toast('Invidious gagal, mencoba YouTube API...', 'warn');
+      searchYouTube(q, btn);
+    });
+  }
+}
+
+// ── Search via Invidious API ──
+function searchInvidious(q, btn, instance, attempt, fallbackFn) {
+  var url = instance + '/api/v1/search?q=' + encodeURIComponent(q + ' music') + '&type=video&fields=videoId,title,author,videoThumbnails&page=1';
+
+  document.getElementById('loading-text').textContent = 'INVIDIOUS: ' + instance.replace('https://','').substring(0,20);
+
+  fetch(url, { signal: AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined })
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Cari'; }
+      if (!data || data.length === 0) { toast('Tidak ada hasil.'); renderEmpty('Tidak ada hasil'); return; }
+      tracks = data.slice(0, 20).map(function(it) {
+        var thumb = '';
+        if (it.videoThumbnails && it.videoThumbnails.length > 0) {
+          // prefer smaller thumb
+          var t = it.videoThumbnails.find(function(t){ return t.quality === 'default'; }) || it.videoThumbnails[0];
+          // Replace YouTube thumb with Invidious-proxied thumb
+          thumb = instance + '/vi/' + it.videoId + '/default.jpg';
+        }
+        return { id: it.videoId, title: it.title, ch: it.author, thumb: thumb };
+      });
+      currentSource = 'invidious';
+      CFG.invInstance = instance;
+      invInstanceIdx = INV_INSTANCES.indexOf(instance);
+      updateSourceLabel('inv', instance.replace('https://','').split('/')[0]);
+      renderTracks();
+      toast('Ditemukan ' + tracks.length + ' lagu (Invidious)');
+    })
+    .catch(function(err) {
+      // Try next Invidious instance
+      var nextAttempt = attempt + 1;
+      if (nextAttempt < INV_INSTANCES.length && CFG.mode !== 'yt') {
+        toast('Mencoba instance lain... (' + (nextAttempt+1) + '/' + INV_INSTANCES.length + ')', 'warn');
+        searchInvidious(q, btn, INV_INSTANCES[nextAttempt], nextAttempt, fallbackFn);
+      } else {
+        if (fallbackFn) {
+          fallbackFn();
+        } else {
+          if (btn) { btn.disabled = false; btn.textContent = 'Cari'; }
+          toast('Semua Invidious gagal. Pakai mode demo.', 'err');
+          showDemoPlaylist(q);
+        }
+      }
+    });
+}
+
+// ── Search via YouTube Data API (with CORS proxy fallback) ──
+function searchYouTube(q, btn) {
+  if (!CFG.apiKey) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Cari'; }
+    toast('YouTube API Key belum diset. Pakai mode demo.');
+    showDemoPlaylist(q); return;
+  }
+  tryYouTubeSearch(q, btn, 0);
+}
+
+function tryYouTubeSearch(q, btn, proxyIdx) {
+  var baseUrl = 'https://www.googleapis.com/youtube/v3/search'
+    + '?part=snippet&type=video&videoCategoryId=10&maxResults=20'
+    + '&q=' + encodeURIComponent(q + ' music')
+    + '&key=' + CFG.apiKey;
+
+  var url;
+  if (proxyIdx === 0) {
+    url = baseUrl; // Direct first
+  } else if (proxyIdx <= CORS_PROXIES.length) {
+    url = CORS_PROXIES[proxyIdx - 1] + encodeURIComponent(baseUrl);
+    toast('Menggunakan proxy ' + proxyIdx + '...', 'warn');
+  } else {
+    if (btn) { btn.disabled = false; btn.textContent = 'Cari'; }
+    toast('YouTube API diblokir jaringan. Beralih ke Invidious.', 'err');
+    searchInvidious(q, btn, INV_INSTANCES[0], 0);
+    return;
+  }
+
+  fetch(url)
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d.error && d.error.message) || 'HTTP ' + r.status); });
+      return r.json();
+    })
+    .then(function(data) {
+      if (btn) { btn.disabled = false; btn.textContent = 'Cari'; }
+      if (!data.items || data.items.length === 0) { toast('Tidak ada hasil.'); renderEmpty('Tidak ada hasil'); return; }
+      tracks = data.items.map(function(it) {
+        return {
+          id: it.id.videoId,
+          title: it.snippet.title,
+          ch: it.snippet.channelTitle,
+          thumb: it.snippet.thumbnails.default ? it.snippet.thumbnails.default.url : ''
+        };
+      });
+      currentSource = 'youtube';
+      updateSourceLabel('yt', 'YOUTUBE API');
+      renderTracks();
+      toast('Ditemukan ' + tracks.length + ' lagu (YouTube API)');
+    })
+    .catch(function(err) {
+      // Try CORS proxy fallback
+      tryYouTubeSearch(q, btn, proxyIdx + 1);
+    });
+}
+
+function updateSourceLabel(type, name) {
+  var el = document.getElementById('active-source-label');
+  el.className = 'source-label ' + type;
+  el.textContent = name ? name.toUpperCase() : type.toUpperCase();
+
+  var dot = document.getElementById('mode-dot');
+  var lbl = document.getElementById('mode-label');
+  dot.className = 'dot ' + type;
+  lbl.textContent = type === 'inv' ? 'INVIDIOUS' : (type === 'yt' ? 'YOUTUBE' : 'DEMO');
+}
+
+// ─── DEMO PLAYLIST ────────────────────────────────────────
+function showDemoPlaylist(q) {
+  tracks = [
+    { id: 'dQw4w9WgXcQ', title: 'Rick Astley - Never Gonna Give You Up', ch: 'Rick Astley', thumb: 'https://i.ytimg.com/vi/dQw4w9WgXcQ/default.jpg' },
+    { id: 'kXYiU_JCYtU', title: 'Linkin Park - Numb', ch: 'Linkin Park', thumb: 'https://i.ytimg.com/vi/kXYiU_JCYtU/default.jpg' },
+    { id: 'fJ9rUzIMcZQ', title: 'Bohemian Rhapsody', ch: 'Queen Official', thumb: 'https://i.ytimg.com/vi/fJ9rUzIMcZQ/default.jpg' },
+    { id: '1w7OgIMMRc4', title: 'Sweet Child O Mine', ch: "Guns N' Roses", thumb: 'https://i.ytimg.com/vi/1w7OgIMMRc4/default.jpg' },
+    { id: 'CdqoNKCCt7A', title: 'Someone Like You', ch: 'Adele', thumb: 'https://i.ytimg.com/vi/CdqoNKCCt7A/default.jpg' },
+    { id: 'JGwWNGJdvx8', title: 'Shape of You', ch: 'Ed Sheeran', thumb: 'https://i.ytimg.com/vi/JGwWNGJdvx8/default.jpg' },
+    { id: 'OPf0YbXqDm0', title: 'Mark Ronson - Uptown Funk ft. Bruno Mars', ch: 'Mark Ronson', thumb: 'https://i.ytimg.com/vi/OPf0YbXqDm0/default.jpg' }
+  ];
+  currentSource = 'demo';
+  updateSourceLabel('demo', 'DEMO');
+  renderTracks();
+  toast('Mode demo aktif. Buka Pengaturan untuk sumber nyata.');
+}
+
+function showSearchingState() {
+  document.getElementById('track-list').innerHTML = '<div class="empty-wrap"><div class="empty-icon-wrap"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div><div class="empty-title">Mencari...</div><div class="spinner-sm"></div></div>';
+}
+
+function renderEmpty(msg) {
+  document.getElementById('track-list').innerHTML = '<div class="empty-wrap"><div class="empty-title">' + esc(msg) + '</div></div>';
+  document.getElementById('track-badge').textContent = '0 lagu';
+}
+
+function renderTracks() {
+  document.getElementById('track-badge').textContent = tracks.length + ' lagu';
+  var html = tracks.map(function(t, i) {
+    return '<div class="track-item' + (i === curIdx ? ' active' : '') + '" id="ti-' + i + '" onclick="playTrack(' + i + ')">'
+      + '<img class="track-thumb" src="' + esc(t.thumb) + '" alt="" onerror="this.style.background=\'#2a2a3a\'" loading="lazy"/>'
+      + '<div class="track-info"><div class="track-title">' + esc(t.title) + '</div><div class="track-ch">' + esc(t.ch) + '</div></div>'
+      + '<div class="track-idx">' + (i + 1) + '</div>'
+      + '<div class="wave-bars"><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div></div>'
+      + '</div>';
+  }).join('');
+  document.getElementById('track-list').innerHTML = html;
+}
+
+// ─── PLAYBACK ─────────────────────────────────────────────
+function playTrack(idx) {
+  if (idx < 0 || idx >= tracks.length) return;
+  curIdx = idx;
+  var t = tracks[idx];
+  showLdr();
+  document.getElementById('idle-view').style.display = 'none';
+  document.getElementById('player-view').style.display = 'block';
+  document.getElementById('idle-disc').classList.add('spin');
+  document.getElementById('np-title').textContent = t.title;
+  document.getElementById('np-ch').textContent = t.ch;
+  document.getElementById('np-source').textContent = CFG.playerType === 'inv' ? 'via Invidious - Bebas Iklan' : 'via YouTube';
+  renderTracks(); scrollToTrack(idx);
+  hideAdOverlay(); stopProg(); stopSimProg();
+
+  if (CFG.playerType === 'inv') {
+    playerReady = false;
+    loadInvidiousPlayer(t.id);
+  } else {
+    loadYTPlayerVideo(t.id);
+  }
+}
+
+function loadYTPlayerVideo(videoId) {
+  if (ytPlayer && playerReady) {
+    document.getElementById('loading-text').textContent = 'MEMUAT...';
+    ytPlayer.loadVideoById(videoId);
+  } else {
+    // YT player not ready, try to initialize
+    document.getElementById('loading-text').textContent = 'INIT PLAYER...';
+    // Create fresh container
+    var target = document.getElementById('yt-frame-target');
+    target.innerHTML = '';
+    var div = document.createElement('div');
+    div.id = 'yt-inner';
+    target.appendChild(div);
+    var pendingVideoId = videoId;
+    ytPlayer = new YT.Player('yt-inner', {
+      height: '100%', width: '100%',
+      videoId: pendingVideoId,
+      playerVars: { autoplay: 1, controls: 0, modestbranding: 1, rel: 0, fs: 0, iv_load_policy: 3, playsinline: 1 },
+      events: {
+        onReady: function(e) {
+          playerReady = true;
+          setVolumeRaw(document.getElementById('vol-slider').value);
+          e.target.playVideo();
+        },
+        onStateChange: function(e) {
+          var S = YT.PlayerState;
+          if (e.data === S.PLAYING) { checkForAd(); setPlayState(true); hideLdr(); startProg(); }
+          else if (e.data === S.PAUSED) { setPlayState(false); stopProg(); }
+          else if (e.data === S.ENDED) { setPlayState(false); stopProg(); hideAdOverlay(); if (isRepeat) playTrack(curIdx); else nextTrack(); }
+          else if (e.data === S.BUFFERING) { showLdr(); }
+        },
+        onError: function() { hideLdr(); toast('Video tidak bisa diputar, melewati...'); setTimeout(nextTrack, 1200); }
+      }
+    });
+  }
+}
+
+function togglePlay() {
+  if (curIdx < 0) { if (tracks.length > 0) playTrack(0); return; }
+  if (CFG.playerType === 'inv') {
+    // For Invidious we simulate
+    if (isPlaying) { setPlayState(false); stopSimProg(); }
+    else { setPlayState(true); simulateProgress(); }
+    return;
+  }
+  if (!playerReady) return;
+  var s = ytPlayer.getPlayerState();
+  if (s === YT.PlayerState.PLAYING) ytPlayer.pauseVideo();
+  else ytPlayer.playVideo();
+}
+
+function prevTrack() {
+  if (!tracks.length) return;
+  var idx = isShuffle ? randIdx() : (curIdx - 1 + tracks.length) % tracks.length;
+  playTrack(idx);
+}
+function nextTrack() {
+  if (!tracks.length) return;
+  var idx = isShuffle ? randIdx() : (curIdx + 1) % tracks.length;
+  playTrack(idx);
+}
+function randIdx() {
+  var n; for (var i = 0; i < 10; i++) { n = Math.floor(Math.random() * tracks.length); if (n !== curIdx || tracks.length === 1) break; } return n;
+}
+function toggleShuffle() {
+  isShuffle = !isShuffle;
+  document.getElementById('btn-shuf').classList.toggle('lit', isShuffle);
+  toast(isShuffle ? 'Acak: ON' : 'Acak: OFF');
+}
+function toggleRepeat() {
+  isRepeat = !isRepeat;
+  document.getElementById('btn-rep').classList.toggle('lit', isRepeat);
+  toast(isRepeat ? 'Ulangi: ON' : 'Ulangi: OFF');
+}
+function setPlayState(state) {
+  isPlaying = state;
+  document.getElementById('ico-play').style.display = state ? 'none' : 'block';
+  document.getElementById('ico-pause').style.display = state ? 'block' : 'none';
+  var disc = document.getElementById('idle-disc');
+  if (state) disc.classList.add('spin'); else disc.classList.remove('spin');
+}
+
+// ─── PROGRESS (YouTube) ────────────────────────────────────
+function startProg() {
+  stopProg();
+  progTimer = setInterval(function() {
+    if (!playerReady || typeof ytPlayer.getDuration !== 'function') return;
+    var cur = ytPlayer.getCurrentTime() || 0;
+    var dur = ytPlayer.getDuration() || 0;
+    if (dur > 0) {
+      document.getElementById('prog-fill').style.width = (cur / dur * 100) + '%';
+      document.getElementById('t-cur').textContent = fmt(cur);
+      document.getElementById('t-dur').textContent = fmt(dur);
+    }
+  }, 900);
+}
+function stopProg() { if (progTimer) { clearInterval(progTimer); progTimer = null; } }
+
+function seekTo(e) {
+  if (CFG.playerType === 'inv') {
+    // Seek simulation for Invidious
+    var rect = document.getElementById('prog-track').getBoundingClientRect();
+    var pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    simStart = Date.now() - (pct * simDur * 1000);
+    return;
+  }
+  if (!playerReady || typeof ytPlayer.getDuration !== 'function') return;
+  var rect = document.getElementById('prog-track').getBoundingClientRect();
+  var pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  ytPlayer.seekTo(pct * (ytPlayer.getDuration() || 0), true);
+}
+
+function fmt(s) {
+  s = Math.floor(s);
+  return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2);
+}
+
+// ─── VOLUME ────────────────────────────────────────────────
+function setVolume(v) {
+  setVolumeRaw(v);
+  document.getElementById('vol-slider').value = v;
+}
+function setVolumeRaw(v) {
+  if (CFG.playerType === 'yt' && playerReady && ytPlayer) ytPlayer.setVolume(Number(v));
+}
+function toggleMute() {
+  isMuted = !isMuted;
+  if (CFG.playerType === 'yt' && playerReady && ytPlayer) {
+    if (isMuted) ytPlayer.mute(); else ytPlayer.unMute();
+  }
+  document.getElementById('ico-vol').style.display = isMuted ? 'none' : 'block';
+  document.getElementById('ico-mute').style.display = isMuted ? 'block' : 'none';
+}
+
+// ─── UI HELPERS ───────────────────────────────────────────
+function showLdr() { document.getElementById('vid-loading').classList.add('show'); }
+function hideLdr() { document.getElementById('vid-loading').classList.remove('show'); }
+function scrollToTrack(i) { var el = document.getElementById('ti-'+i); if (el) el.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+
+var toastTmr = null;
+function toast(msg, type) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.borderLeftColor = type === 'err' ? 'var(--red)' : type === 'warn' ? 'var(--yellow)' : type === 'ok' ? 'var(--green)' : 'var(--accent)';
+  el.classList.add('show');
+  if (toastTmr) clearTimeout(toastTmr);
+  toastTmr = setTimeout(function() { el.classList.remove('show'); }, 3500);
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── SETTINGS MODAL ───────────────────────────────────────
+var selectedMode = 'auto';
+var selectedPlayer = 'inv';
+
+function openModal(first) {
+  firstOpen = !!first;
+  document.getElementById('btn-modal-cancel').style.display = first ? 'none' : 'block';
+  // Populate current settings
+  selectMode(CFG.mode, true);
+  selectPlayer(CFG.playerType, true);
+  document.getElementById('api-key-input').value = CFG.apiKey || '';
+  document.getElementById('inv-instance').value = INV_INSTANCES.includes(CFG.invInstance) ? CFG.invInstance : 'custom';
+  if (!INV_INSTANCES.includes(CFG.invInstance)) {
+    document.getElementById('custom-inv-input').value = CFG.invInstance;
+    document.getElementById('custom-inv-wrap').style.display = 'block';
+  }
+  var adToggle = document.getElementById('adblock-toggle');
+  adToggle.className = 'toggle-switch' + (CFG.adblock ? ' on' : '');
+  document.getElementById('modal-backdrop').classList.add('show');
+}
+function closeModal() { document.getElementById('modal-backdrop').classList.remove('show'); }
+
+function selectMode(mode, silent) {
+  selectedMode = mode;
+  ['auto','inv','yt'].forEach(function(m) {
+    var tab = document.getElementById('tab-'+m);
+    tab.className = 'source-tab' + (m === mode ? ' sel-' + (m === 'yt' ? 'yt' : m === 'inv' ? 'inv' : 'auto') : '');
+  });
+  document.getElementById('inv-panel').style.display = (mode === 'yt') ? 'none' : 'block';
+  document.getElementById('yt-panel').style.display = (mode === 'yt' || mode === 'auto') ? 'block' : 'none';
+}
+
+function selectPlayer(type, silent) {
+  selectedPlayer = type;
+  ['inv','yt'].forEach(function(t) {
+    var tab = document.getElementById('tab-player-'+t);
+    tab.className = 'source-tab' + (t === type ? ' sel-' + (t === 'yt' ? 'yt' : 'inv') : '');
+  });
+}
+
+function toggleAdblock() {
+  var toggle = document.getElementById('adblock-toggle');
+  var isOn = toggle.classList.contains('on');
+  toggle.className = 'toggle-switch' + (isOn ? '' : ' on');
+}
+
+function saveSettings() {
+  var invSel = document.getElementById('inv-instance').value;
+  var invUrl = invSel === 'custom' ? document.getElementById('custom-inv-input').value.trim().replace(/\/$/, '') : invSel;
+  var apiVal = document.getElementById('api-key-input').value.trim();
+  var adOn = document.getElementById('adblock-toggle').classList.contains('on');
+
+  CFG.mode = selectedMode;
+  CFG.playerType = selectedPlayer;
+  CFG.apiKey = apiVal;
+  CFG.invInstance = invUrl || INV_INSTANCES[0];
+  CFG.adblock = adOn;
+
+  // Update UI
+  var dot = document.getElementById('status-dot');
+  var lbl = document.getElementById('api-btn-label');
+  if (CFG.apiKey) { dot.classList.add('active'); lbl.textContent = 'API: ***' + CFG.apiKey.slice(-4); }
+  else { dot.classList.remove('active'); lbl.textContent = 'PENGATURAN'; }
+
+  var adBadge = document.getElementById('adblock-badge');
+  adBadge.style.display = CFG.adblock ? 'flex' : 'none';
+
+  // Load YT script if needed
+  if (CFG.playerType === 'yt' || CFG.mode === 'auto') {
+    loadYTScript();
+  }
+
+  closeModal();
+  var modeNames = { auto: 'AUTO (Invidious + YT)', inv: 'Invidious', yt: 'YouTube API' };
+  toast('Tersimpan! Mode: ' + modeNames[CFG.mode] + ' | Player: ' + CFG.playerType.toUpperCase() + (CFG.adblock ? ' | AdBlock ON' : ''), 'ok');
+}
+
+// Handle Invidious custom instance
+document.getElementById('inv-instance').addEventListener('change', function() {
+  document.getElementById('custom-inv-wrap').style.display = this.value === 'custom' ? 'block' : 'none';
+});
+
+// Close modal on backdrop click
+document.getElementById('modal-backdrop').addEventListener('click', function(e) {
+  if (e.target === this && !firstOpen) closeModal();
+});
+
+function toggleKeyVis() {
+  var inp = document.getElementById('api-key-input');
+  var isPass = inp.type === 'password';
+  inp.type = isPass ? 'text' : 'password';
+  document.getElementById('eye-open').style.display = isPass ? 'none' : 'block';
+  document.getElementById('eye-closed').style.display = isPass ? 'block' : 'none';
+}
+
+// ─── INIT ─────────────────────────────────────────────────
+window.addEventListener('load', function() {
+  // Default: AUTO mode with Invidious player
+  selectMode('auto', true);
+  selectPlayer('inv', true);
+  // Load YT API in background (for fallback)
+  loadYTScript();
+  // Show adblock badge by default
+  document.getElementById('adblock-badge').style.display = 'flex';
+  setTimeout(function() { openModal(true); }, 400);
+  // Start ad watcher
+  startAdWatch();
+});
+</script>
+
+</body>
+</html>
