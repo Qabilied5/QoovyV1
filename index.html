@@ -2,8 +2,8 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QTream - Music Player</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Qoovy - Music Player</title>
 <style>
 :root {
   --bg: #080810;
@@ -63,6 +63,7 @@ header {
   background:rgba(8,8,16,0.7);
   backdrop-filter:blur(24px);
   border-bottom:1px solid var(--glass-border);
+  flex-shrink: 0;
 }
 .logo-wrap { display:flex; align-items:baseline; gap:10px; }
 .logo-text {
@@ -101,7 +102,7 @@ header {
 .status-dot.active { background:var(--green); box-shadow:0 0 8px var(--green); }
 
 /* LAYOUT */
-.app { position:relative; z-index:5; flex:1; display:flex; overflow:hidden; }
+.app { position:relative; z-index:5; flex:1; display:flex; overflow:hidden; min-height:0; }
 
 /* SIDEBAR */
 .sidebar {
@@ -110,6 +111,7 @@ header {
   background:rgba(8,8,16,0.5);
   backdrop-filter:blur(20px);
   border-right:1px solid var(--glass-border);
+  flex-shrink:0;
 }
 .search-section { padding:18px 16px 14px; border-bottom:1px solid var(--glass-border); }
 .section-label {
@@ -186,7 +188,7 @@ header {
 .spinner-sm { width:28px; height:28px; border:2px solid var(--muted2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; margin:16px auto 0; }
 
 /* MAIN */
-.main-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; }
+.main-panel { flex:1; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
 .video-area {
   flex:1; display:flex; align-items:center; justify-content:center;
   padding:28px 24px 16px; overflow:hidden; position:relative;
@@ -213,7 +215,7 @@ header {
 }
 #yt-iframe {
   width:100%; height:100%; border:none; display:block;
-  pointer-events:none; /* prevent user clicking iframe - we handle all controls */
+  pointer-events:none;
 }
 .video-shimmer { position:absolute; inset:0; pointer-events:none; border-radius:18px; box-shadow:inset 0 0 60px rgba(0,0,0,0.4); }
 
@@ -283,6 +285,7 @@ header {
   background:rgba(8,8,16,0.6);
   backdrop-filter:blur(24px);
   border-top:1px solid var(--glass-border);
+  flex-shrink:0;
 }
 .progress-row { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
 .time { font-size:11px; font-family:'Courier New',monospace; color:var(--muted); min-width:36px; text-align:center; }
@@ -363,6 +366,209 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
   box-shadow:0 4px 24px rgba(0,0,0,0.4);
 }
 .toast.show { transform:translateY(0) scale(1); opacity:1; }
+
+/* =============================================
+   MOBILE PLAYLIST TOGGLE BUTTON (hidden on desktop)
+   ============================================= */
+.mobile-playlist-toggle {
+  display: none;
+}
+
+/* =============================================
+   MOBILE BOTTOM SHEET OVERLAY
+   ============================================= */
+.mobile-sheet-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(4px);
+}
+.mobile-sheet-overlay.show { display: block; }
+
+/* =============================================
+   RESPONSIVE — TABLET (max 900px)
+   ============================================= */
+@media (max-width: 900px) {
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+  }
+  .logo-sub { display: none; }
+  .api-btn { padding: 7px 10px; font-size: 11px; }
+  #api-btn-label { display: none; }
+  .video-area { padding: 16px 16px 12px; }
+  .controls-zone { padding: 12px 16px 18px; }
+  .np-title { font-size: 18px; }
+}
+
+/* =============================================
+   RESPONSIVE — MOBILE (max 640px)
+   ============================================= */
+@media (max-width: 640px) {
+  /* HEADER */
+  header {
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .logo-text { font-size: 16px; letter-spacing: 3px; }
+  .logo-sub { display: none; }
+  .header-right { gap: 6px; }
+
+  /* AdBlock badge — icon only on mobile */
+  .adb-badge { padding: 7px 9px; }
+  #adb-label { display: none; }
+
+  /* API btn — icon only on mobile */
+  .api-btn { padding: 7px 9px; font-size: 11px; gap: 5px; }
+  #api-btn-label { display: none; }
+
+  /* LAYOUT: stack vertically */
+  .app { flex-direction: column; position: relative; }
+
+  /* SIDEBAR: becomes fixed bottom sheet */
+  .sidebar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    min-width: 0;
+    height: 72vh;
+    max-height: 72vh;
+    border-right: none;
+    border-top: 1px solid var(--glass-border);
+    border-radius: 20px 20px 0 0;
+    z-index: 50;
+    background: rgba(10,10,20,0.97);
+    backdrop-filter: blur(28px);
+    transform: translateY(100%);
+    transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -8px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(167,139,250,0.08);
+  }
+  .sidebar.mobile-open {
+    transform: translateY(0);
+  }
+
+  /* Drag handle at top of sidebar sheet */
+  .sidebar::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--muted2);
+    border-radius: 2px;
+    margin: 10px auto 6px;
+    flex-shrink: 0;
+  }
+
+  /* MAIN PANEL: takes full space */
+  .main-panel { flex: 1; width: 100%; }
+
+  /* VIDEO AREA */
+  .video-area {
+    padding: 12px 12px 8px;
+    align-items: flex-start;
+    padding-top: 14px;
+  }
+
+  /* PLAYER VIEW: full width */
+  .player-view { max-width: 100%; }
+
+  /* NOW PLAYING INFO: tighter on mobile */
+  .now-playing-info { margin-top: 10px; }
+  .np-title { font-size: 15px; max-width: 100%; }
+  .np-ch { font-size: 12px; }
+  .np-label { font-size: 8px; margin-bottom: 4px; }
+  .status-bar { margin-top: 5px; gap: 5px; }
+  .status-pill { font-size: 9px; padding: 2px 7px; }
+
+  /* CONTROLS ZONE */
+  .controls-zone { padding: 10px 14px 14px; }
+  .progress-row { gap: 8px; margin-bottom: 10px; }
+  .time { font-size: 10px; min-width: 30px; }
+
+  .ctrl-row { gap: 0; }
+  .ctrl-group { gap: 4px; }
+
+  /* Play button stays prominent */
+  .play-btn { width: 50px; height: 50px; }
+  .c-btn { width: 34px; height: 34px; }
+  .c-btn[onclick="prevTrack()"],
+  .c-btn[onclick="nextTrack()"] { width: 38px; height: 38px; }
+
+  /* Volume: hide slider, keep mute button */
+  input[type=range].vol-slider { display: none; }
+
+  /* MOBILE PLAYLIST TOGGLE BUTTON */
+  .mobile-playlist-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    position: fixed;
+    bottom: 20px;
+    right: 16px;
+    z-index: 48;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 50px;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 11px 18px;
+    cursor: pointer;
+    box-shadow: 0 0 28px var(--glow-a), 0 4px 20px rgba(0,0,0,0.5);
+    transition: all 0.25s;
+  }
+  .mobile-playlist-toggle:active { transform: scale(0.95); }
+  .mobile-playlist-toggle.open { background: linear-gradient(135deg, var(--muted2), #2a2940); box-shadow: none; }
+
+  /* IDLE VIEW: smaller on mobile */
+  .idle-disc { width: 80px; height: 80px; }
+  .idle-heading { font-size: 20px; }
+  .idle-desc { font-size: 12px; }
+
+  /* TOAST: above toggle button */
+  .toast { bottom: 74px; right: 14px; max-width: calc(100vw - 28px); font-size: 12px; }
+
+  /* MODAL: full width on mobile */
+  .modal {
+    margin: 0 14px;
+    padding: 26px 20px;
+    border-radius: 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal-title { font-size: 16px; }
+  .modal-desc { font-size: 12px; margin-bottom: 16px; }
+  .btn-confirm, .btn-cancel { font-size: 13px; padding: 11px; }
+
+  /* Progress track: taller tap target on mobile */
+  .prog-track {
+    height: 6px;
+    border-radius: 6px;
+    margin: 6px 0;
+  }
+  .prog-fill { border-radius: 6px; }
+  .prog-fill::after { width: 14px; height: 14px; right: -7px; opacity: 1; }
+}
+
+/* =============================================
+   RESPONSIVE — SMALL MOBILE (max 380px)
+   ============================================= */
+@media (max-width: 380px) {
+  header { padding: 9px 10px; }
+  .logo-text { font-size: 14px; letter-spacing: 2px; }
+  .controls-zone { padding: 8px 10px 12px; }
+  .ctrl-group { gap: 2px; }
+  .play-btn { width: 46px; height: 46px; }
+  .c-btn { width: 30px; height: 30px; }
+  .mobile-playlist-toggle { padding: 10px 14px; font-size: 11px; }
+  .np-title { font-size: 13px; }
+}
 </style>
 </head>
 <body>
@@ -373,6 +579,9 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
   <div class="orb orb-3"></div>
   <div class="grid-overlay"></div>
 </div>
+
+<!-- Mobile sheet backdrop overlay -->
+<div class="mobile-sheet-overlay" id="mobile-sheet-overlay" onclick="closeMobilePlaylist()"></div>
 
 <header>
   <div class="logo-wrap">
@@ -393,7 +602,7 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
 
 <div class="app">
   <!-- SIDEBAR -->
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
     <div class="search-section">
       <div class="section-label">Cari Musik</div>
       <div class="search-wrap">
@@ -442,7 +651,6 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
       <!-- PLAYER -->
       <div class="player-view" id="player-view">
         <div class="video-glass-wrap">
-          <!-- Single iframe — src diatur via JS -->
           <iframe id="yt-iframe" allowfullscreen allow="autoplay; encrypted-media"></iframe>
           <div class="video-shimmer"></div>
           <div class="vid-loading" id="vid-loading"><div class="spinner"></div></div>
@@ -540,6 +748,19 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
   </div>
 </div>
 
+<!-- Mobile Playlist Toggle Button -->
+<button class="mobile-playlist-toggle" id="mobile-playlist-toggle" onclick="toggleMobilePlaylist()">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="8" y1="6" x2="21" y2="6"/>
+    <line x1="8" y1="12" x2="21" y2="12"/>
+    <line x1="8" y1="18" x2="21" y2="18"/>
+    <line x1="3" y1="6" x2="3.01" y2="6"/>
+    <line x1="3" y1="12" x2="3.01" y2="12"/>
+    <line x1="3" y1="18" x2="3.01" y2="18"/>
+  </svg>
+  <span id="mob-toggle-label">Playlist</span>
+</button>
+
 <!-- MODAL -->
 <div class="modal-backdrop" id="modal-backdrop">
   <div class="modal">
@@ -549,10 +770,10 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
       </svg>
     </div>
-    <div class="modal-title">QTream Membutuhkan Code Key</div>
+    <div class="modal-title">Qoovy Membutuhkan Code Key</div>
     <div class="modal-desc">
       Masukkan Code Key, tidak ada dan tidak Tahu? tanya Qabil.
-      Aktifkan <strong>Code Key</strong> Untuk bisa menggunakaan platoform QTream.
+      Aktifkan <strong>Code Key</strong> Untuk bisa menggunakaan platoform Qoovy.
       Tanpa Code Key, mode demo tetap bisa digunakan (Hanya 10 Lagu).
     </div>
     <div class="modal-input-wrap">
@@ -582,6 +803,49 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
 
 <script>
 // ═══════════════════════════════════════════════════
+//  MOBILE PLAYLIST TOGGLE (UI only — no logic change)
+// ═══════════════════════════════════════════════════
+var mobilePlaylistOpen = false;
+
+function toggleMobilePlaylist() {
+  mobilePlaylistOpen = !mobilePlaylistOpen;
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('mobile-sheet-overlay');
+  var toggleBtn = document.getElementById('mobile-playlist-toggle');
+  var label = document.getElementById('mob-toggle-label');
+
+  if (mobilePlaylistOpen) {
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('show');
+    toggleBtn.classList.add('open');
+    label.textContent = 'Tutup';
+  } else {
+    sidebar.classList.remove('mobile-open');
+    overlay.classList.remove('show');
+    toggleBtn.classList.remove('open');
+    label.textContent = 'Playlist';
+  }
+}
+
+function closeMobilePlaylist() {
+  if (mobilePlaylistOpen) toggleMobilePlaylist();
+}
+
+// Auto-close playlist on mobile when a track is selected
+var _origPlayTrack;
+window.addEventListener('DOMContentLoaded', function() {
+  // Wrap playTrack to auto-close playlist on mobile after selection
+  var origRenderTracks = renderTracks;
+  // We'll intercept track clicks via event delegation instead
+  document.getElementById('track-list').addEventListener('click', function() {
+    // Small delay so track loads first, then close
+    if (window.innerWidth <= 640 && mobilePlaylistOpen) {
+      setTimeout(closeMobilePlaylist, 200);
+    }
+  });
+});
+
+// ═══════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════
 var API_KEY = '';
@@ -594,41 +858,32 @@ var isMuted = false;
 var adBlockEnabled = true;
 var volLevel = 80;
 
-// Progress simulation (iframe-based, no IFrame API needed)
 var progTimer = null;
 var simCur = 0;
 var simDur = 0;
-var simStart = 0; // Date.now() when play started
-var simOffset = 0; // seconds already elapsed before pause
+var simStart = 0;
+var simOffset = 0;
 
-// Ad detection state
 var adCheckTimer = null;
 var adCountdownTimer = null;
 var adCountVal = 5;
 var isAdShowing = false;
 
-// YouTube IFrame API Player (optional, loaded async)
-// We use a DIRECT iframe src approach as primary,
-// and YT IFrame API as enhancement
 var ytPlayer = null;
 var ytAPIReady = false;
 var ytAPILoading = false;
 
-// CORS Proxy list for YouTube Data API
 var CORS_PROXIES = [
   'https://corsproxy.io/?url=',
-  'https://api.allorigins.win/get?url=',   // returns {contents: "..."}
+  'https://api.allorigins.win/get?url=',
   'https://cors.sh/?',
 ];
 var corsProxyIdx = 0;
 
 // ═══════════════════════════════════════════════════
-//  YOUTUBE IFRAME — Direct src approach (no IFrame API bug)
+//  YOUTUBE IFRAME
 // ═══════════════════════════════════════════════════
 function buildIframeSrc(videoId, autoplay) {
-  // youtube-nocookie.com = fewer trackers, same content
-  // enablejsapi=1 allows postMessage communication
-  // origin must match page origin for postMessage to work
   var origin = window.location.origin || 'http://localhost';
   var auto = autoplay ? 1 : 0;
   return 'https://www.youtube-nocookie.com/embed/' + videoId
@@ -646,7 +901,6 @@ function buildIframeSrc(videoId, autoplay) {
     + '&color=white';
 }
 
-// Send postMessage command to iframe
 function ytCmd(func, args) {
   var iframe = document.getElementById('yt-iframe');
   if (!iframe || !iframe.contentWindow) return;
@@ -659,31 +913,24 @@ function ytCmd(func, args) {
   } catch(e) {}
 }
 
-// Listen to postMessage from YouTube iframe
 window.addEventListener('message', function(e) {
-  // Accept messages from youtube-nocookie.com and youtube.com
   if (!e.origin.includes('youtube')) return;
   try {
     var data = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
-
     if (data.event === 'onReady') {
       ytAPIReady = true;
-      // Set volume via postMessage
       ytCmd('setVolume', [isMuted ? 0 : volLevel]);
       hideLdr();
     }
-
     if (data.event === 'onStateChange') {
       handleStateChange(data.info);
     }
-
     if (data.event === 'infoDelivery' && data.info) {
       if (data.info.currentTime !== undefined && data.info.duration !== undefined) {
         simCur = data.info.currentTime;
         simDur = data.info.duration;
         updateProgressUI();
       }
-      // Ad detection: if videoData.video_id doesn't match curVideoId
       if (adBlockEnabled && data.info.videoData) {
         var playingId = data.info.videoData.video_id;
         if (curIdx >= 0 && tracks[curIdx] && playingId && playingId !== tracks[curIdx].id) {
@@ -696,42 +943,37 @@ window.addEventListener('message', function(e) {
   } catch(e2) {}
 });
 
-// YT Player states: -1=unstarted, 0=ended, 1=playing, 2=paused, 3=buffering, 5=cued
 function handleStateChange(state) {
-  if (state === 1) { // PLAYING
+  if (state === 1) {
     setPlayState(true);
     hideLdr();
     startProgTimer();
     if (isAdShowing) hideAdOverlay();
-  } else if (state === 2) { // PAUSED
+  } else if (state === 2) {
     setPlayState(false);
     stopProgTimer();
-  } else if (state === 0) { // ENDED
+  } else if (state === 0) {
     setPlayState(false);
     stopProgTimer();
     if (isRepeat) reloadCurrentTrack();
     else nextTrack();
-  } else if (state === 3) { // BUFFERING
+  } else if (state === 3) {
     showLdr();
   } else if (state === -1 || state === 5) {
     hideLdr();
   }
 }
 
-// Request info from iframe periodically
 var infoRequestTimer = null;
 function startInfoRequests() {
   stopInfoRequests();
   infoRequestTimer = setInterval(function() {
     ytCmd('getVideoData', []);
-    // Also request current time via postMessage
     var iframe = document.getElementById('yt-iframe');
     if (iframe && iframe.contentWindow) {
       try {
         iframe.contentWindow.postMessage(JSON.stringify({
-          event: 'listening',
-          id: 1,
-          channel: 'widget'
+          event: 'listening', id: 1, channel: 'widget'
         }), '*');
       } catch(e) {}
     }
@@ -742,7 +984,7 @@ function stopInfoRequests() {
 }
 
 // ═══════════════════════════════════════════════════
-//  PROGRESS — Hybrid: postMessage + time simulation
+//  PROGRESS
 // ═══════════════════════════════════════════════════
 var progLastUpdate = 0;
 
@@ -751,11 +993,9 @@ function startProgTimer() {
   simStart = Date.now();
   progTimer = setInterval(function() {
     if (!isPlaying) return;
-    // Advance simulated time
     simCur += 0.9;
     if (simDur > 0 && simCur > simDur) simCur = simDur;
     updateProgressUI();
-    // Request real time from iframe every 5 ticks
     progLastUpdate++;
     if (progLastUpdate % 5 === 0) {
       var iframe = document.getElementById('yt-iframe');
@@ -790,12 +1030,24 @@ function fmt(s) {
 
 function seekTo(e) {
   var rect = document.getElementById('prog-track').getBoundingClientRect();
-  var pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  var pct = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
   var seekSec = pct * (simDur || 300);
   simCur = seekSec;
   ytCmd('seekTo', [seekSec, true]);
   updateProgressUI();
 }
+
+// Touch support for progress bar
+document.addEventListener('DOMContentLoaded', function() {
+  var pt = document.getElementById('prog-track');
+  if (pt) {
+    pt.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+      seekTo(e);
+    }, { passive: false });
+  }
+});
 
 // ═══════════════════════════════════════════════════
 //  AD BLOCKER
@@ -819,10 +1071,8 @@ function triggerAdOverlay() {
 
 function skipAdNow() {
   clearInterval(adCountdownTimer);
-  // Try all skip methods
   ytCmd('playVideo', []);
-  ytCmd('seekTo', [9999, true]); // jump to end of ad
-  // After short delay, reload actual video
+  ytCmd('seekTo', [9999, true]);
   setTimeout(function() {
     if (isAdShowing && curIdx >= 0) {
       reloadCurrentTrack();
@@ -857,8 +1107,6 @@ function toggleAdBlock() {
   }
 }
 
-// Proactive ad skip: monitor iframe content every 2 seconds
-// by checking if autoplay was hijacked
 var adWatchTimer = null;
 function startAdWatch(videoId) {
   stopAdWatch();
@@ -866,10 +1114,7 @@ function startAdWatch(videoId) {
   var checks = 0;
   adWatchTimer = setInterval(function() {
     checks++;
-    // After 3s, if still buffering/loading AND adblock on, try skip
-    // This catches pre-roll ads that start before our video
     if (checks === 2 && adBlockEnabled && !isPlaying) {
-      // Send skip ad click signal via postMessage
       ytCmd('cancelPlayback', []);
       setTimeout(function() {
         if (curIdx >= 0 && !isPlaying) {
@@ -895,24 +1140,20 @@ function playTrack(idx) {
   var t = tracks[idx];
   currentVideoId = t.id;
 
-  // Reset state
   simCur = 0; simDur = 0;
   ytAPIReady = false;
   isPlaying = false;
   stopProgTimer();
   hideAdOverlay();
 
-  // Show player
   document.getElementById('idle-view').style.display = 'none';
   document.getElementById('player-view').style.display = 'block';
   document.getElementById('idle-disc').classList.add('spin');
   showLdr();
 
-  // Load iframe
   var iframe = document.getElementById('yt-iframe');
   iframe.src = buildIframeSrc(t.id, true);
 
-  // Update info
   document.getElementById('np-title').textContent = t.title;
   document.getElementById('np-ch').textContent = t.ch;
   document.getElementById('prog-fill').style.width = '0%';
@@ -924,16 +1165,14 @@ function playTrack(idx) {
   startInfoRequests();
   startAdWatch(t.id);
 
-  // Fallback: hide loader after 6s even if no event fires
   setTimeout(function() {
     if (curIdx === idx) hideLdr();
   }, 6000);
 
-  // Fallback: start simulated progress if no postMessage after 4s
   setTimeout(function() {
     if (curIdx === idx && !isPlaying) {
       setPlayState(true);
-      if (simDur === 0) simDur = 240; // assume 4 min
+      if (simDur === 0) simDur = 240;
       startProgTimer();
     }
   }, 4000);
@@ -1007,7 +1246,7 @@ function toggleRepeat() {
 }
 
 // ═══════════════════════════════════════════════════
-//  VOLUME — postMessage based
+//  VOLUME
 // ═══════════════════════════════════════════════════
 function onVolSlider(v) {
   volLevel = Number(v);
@@ -1029,7 +1268,7 @@ function toggleMute() {
 }
 
 // ═══════════════════════════════════════════════════
-//  SEARCH — YouTube API → CORS Proxy fallback → Demo
+//  SEARCH
 // ═══════════════════════════════════════════════════
 function doSearch() {
   var q = document.getElementById('search-input').value.trim();
@@ -1057,17 +1296,13 @@ function trySearchWithProxy(q, btn) {
     + '&key=' + API_KEY;
 
   var fetchUrl;
-  var useProxy = corsProxyIdx > 0;
-
   if (corsProxyIdx === 0) {
-    // Try direct first
     fetchUrl = ytUrl;
   } else if (corsProxyIdx === 1) {
     fetchUrl = CORS_PROXIES[0] + encodeURIComponent(ytUrl);
   } else if (corsProxyIdx === 2) {
     fetchUrl = CORS_PROXIES[1] + encodeURIComponent(ytUrl);
   } else {
-    // All proxies failed, use demo
     btn.disabled = false; btn.textContent = 'Cari';
     toast('API tidak dapat dijangkau. Mode demo aktif.');
     showDemoPlaylist(q);
@@ -1081,11 +1316,9 @@ function trySearchWithProxy(q, btn) {
       return r.json();
     })
     .then(function(raw) {
-      // allorigins wraps in {contents: "..."}
       var data = raw.contents ? JSON.parse(raw.contents) : raw;
       if (data.error) throw new Error(data.error.message || 'API Error');
       if (!data.items || !data.items.length) { toast('Tidak ada hasil.'); renderEmpty('Tidak ada hasil'); btn.disabled = false; btn.textContent = 'Cari'; return; }
-
       tracks = data.items.map(function(it) {
         return {
           id: it.id.videoId,
@@ -1204,7 +1437,7 @@ function saveApiKey() {
   corsProxyIdx = 0;
   if (val) {
     toast('Code Key tersimpan! Silakan cari musik.');
-    setModeText('QTream Key aktif');
+    setModeText('Qoovy Key aktif');
   } else {
     toast('Mode demo aktif.');
     setModeText('Mode demo — masukkan Code Key untuk pencarian nyata');
@@ -1242,9 +1475,7 @@ document.getElementById('api-key-input').addEventListener('keydown', function(e)
 //  INIT
 // ═══════════════════════════════════════════════════
 window.addEventListener('load', function() {
-  // Show demo playlist immediately so UI isn't empty
   showDemoPlaylist('demo');
-  // Open API modal after short delay
   setTimeout(function() { openModal(true); }, 500);
 });
 </script>
