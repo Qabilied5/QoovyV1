@@ -436,7 +436,7 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
           <div class="disc-inner"><div class="disc-hole"></div></div>
         </div>
         <div class="idle-heading">Siap Streaming</div>
-        <div class="idle-desc">Set API Key YouTube Data v3, cari lagu di sidebar, dan pilih untuk mulai memutar.</div>
+        <div class="idle-desc">Cari lagu di sidebar, dan pilih untuk mulai memutar.</div>
       </div>
 
       <!-- PLAYER -->
@@ -549,14 +549,14 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
         <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
       </svg>
     </div>
-    <div class="modal-title">YouTube Data API Key</div>
+    <div class="modal-title">QTream Membutuhkan Code Key</div>
     <div class="modal-desc">
-      Masukkan API Key dari <a href="https://console.cloud.google.com" target="_blank" rel="noopener">Google Cloud Console</a>.
-      Aktifkan <strong>YouTube Data API v3</strong> lalu buat credentials API Key.
-      Tanpa API Key, mode demo tetap bisa digunakan.
+      Masukkan Code Key, tidak ada dan tidak Tahu? tanya Qabil.
+      Aktifkan <strong>Code Key</strong> Untuk bisa menggunakaan platoform QTream.
+      Tanpa Code Key, mode demo tetap bisa digunakan (Hanya 10 Lagu).
     </div>
     <div class="modal-input-wrap">
-      <input class="modal-input" id="api-key-input" type="password" placeholder="AIzaSy..." autocomplete="off" spellcheck="false"/>
+      <input class="modal-input" id="api-key-input" type="password" placeholder="Key..." autocomplete="off" spellcheck="false"/>
       <button class="toggle-key" onclick="toggleKeyVis()" title="Tampilkan/sembunyikan">
         <svg id="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
@@ -573,7 +573,7 @@ input[type=range].vol-slider::-webkit-slider-thumb:hover { background:var(--acce
       <button class="btn-cancel" id="btn-modal-cancel" onclick="closeModal()">Batal</button>
     </div>
     <div class="modal-note">
-      API Key hanya tersimpan di sesi browser ini. Data tidak dikirim ke server manapun.
+      Code Key hanya tersimpan di sesi browser ini. Data Aman.
     </div>
   </div>
 </div>
@@ -1124,7 +1124,7 @@ function showDemoPlaylist(q) {
     { id: '7wtfhZwyrcc', title: 'Post Malone - Circles', ch: 'Post Malone', thumb: 'https://i.ytimg.com/vi/7wtfhZwyrcc/default.jpg' }
   ];
   renderTracks();
-  setModeText('Mode demo — masukkan API Key untuk pencarian nyata');
+  setModeText('Mode demo — masukkan Code Key');
   toast('Mode demo aktif — ' + tracks.length + ' lagu tersedia');
 }
 
@@ -1203,11 +1203,11 @@ function saveApiKey() {
   closeModal();
   corsProxyIdx = 0;
   if (val) {
-    toast('API Key tersimpan! Silakan cari musik.');
-    setModeText('YouTube Data API v3 aktif');
+    toast('Code Key tersimpan! Silakan cari musik.');
+    setModeText('QTream Key aktif');
   } else {
     toast('Mode demo aktif.');
-    setModeText('Mode demo — masukkan API Key untuk pencarian nyata');
+    setModeText('Mode demo — masukkan Code Key untuk pencarian nyata');
   }
 }
 
@@ -1216,7 +1216,7 @@ function updateApiStatus() {
   var lbl = document.getElementById('api-btn-label');
   if (API_KEY) {
     dot.classList.add('active');
-    lbl.textContent = 'API: ***' + API_KEY.slice(-4);
+    lbl.textContent = 'Key: ***' + API_KEY.slice(-4);
   } else {
     dot.classList.remove('active');
     lbl.textContent = 'SET API KEY';
